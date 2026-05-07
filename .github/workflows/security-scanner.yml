@@ -1,0 +1,52 @@
+name: Continuous Security Scanner
+
+on:
+  push:
+    branches:
+      - '**' 
+  workflow_dispatch: 
+
+jobs:
+  scan_and_remediate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+          
+      - name: Install pip-audit
+        run: pip install pip-audit
+        
+      - name: Run Security Scan
+        id: security_scan
+        
+        run: |
+          echo "Scanning requirements/base.txt for vulnerabilities..."
+          pip-audit -r requirements/base.txt > audit_output.txt 2>&1 || echo "VULN_FOUND=true" >> $GITHUB_ENV
+          cat audit_output.txt
+        
+      - name: Trigger Devin Orchestrator
+        if: env.VULN_FOUND == 'true'
+        run: |
+          echo "Vulnerabilities detected! Pinging Devin Orchestrator..."
+          
+          # Read the audit output into a variable, escaping newlines for JSON
+          SCAN_DETAILS=$(cat audit_output.txt | jq -R -s -c '.')
+          
+          curl -X POST ${{ secrets.ORCHESTRATOR_URL }}/webhook \
+          -H "Content-Type: application/json" \
+          -d "{
+            \"event_type\": \"automated_scan_failure\",
+            \"repository\": {\"html_url\": \"https://github.com/${{ github.repository }}\"},
+            \"details\": $SCAN_DETAILS
+          }"
+          
+      - name: Fail the Pipeline
+        if: env.VULN_FOUND == 'true'
+        run: |
+          echo "Pipeline failed due to security vulnerabilities. Devin has been dispatched to remediate."
+          exit 1

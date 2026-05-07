@@ -34,16 +34,15 @@ jobs:
         run: |
           echo "Vulnerabilities detected! Pinging Devin Orchestrator..."
           
-          # Read the audit output into a variable, escaping newlines for JSON
-          SCAN_DETAILS=$(cat audit_output.txt | jq -R -s -c '.')
-          
+          jq -n \
+            --arg ev "automated_scan_failure" \
+            --arg repo "https://github.com/${{ github.repository }}" \
+            --arg details "$(cat audit_output.txt)" \
+            '{event_type: $ev, repository: {html_url: $repo}, details: $details}' > payload.json
+
           curl -X POST ${{ secrets.ORCHESTRATOR_URL }}/webhook \
-          -H "Content-Type: application/json" \
-          -d "{
-            \"event_type\": \"automated_scan_failure\",
-            \"repository\": {\"html_url\": \"https://github.com/${{ github.repository }}\"},
-            \"details\": $SCAN_DETAILS
-          }"
+            -H "Content-Type: application/json" \
+            -d @payload.json
           
       - name: Fail the Pipeline
         if: env.VULN_FOUND == 'true'

@@ -31,6 +31,9 @@ jobs:
         
       - name: Trigger Devin Orchestrator
         if: env.VULN_FOUND == 'true'
+        # Map the secret to an environment variable here
+        env:
+          ORCHESTRATOR_URL: ${{ secrets.ORCHESTRATOR_URL }}
         run: |
           echo "Vulnerabilities detected! Pinging Devin Orchestrator..."
           
@@ -40,7 +43,7 @@ jobs:
             --rawfile details audit_output.txt \
             '{event_type: $ev, repository: {html_url: $repo}, details: $details}' > payload.json
 
-          curl -X POST "${{ secrets.ORCHESTRATOR_URL }}/webhook" \
+          curl -g -X POST "${ORCHESTRATOR_URL}/webhook" \
             -H "Content-Type: application/json" \
             -d @payload.json
           

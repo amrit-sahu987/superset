@@ -2,8 +2,8 @@ name: Continuous Security Scanner
 
 on:
   push:
-    branches:
-      - '**'
+    branches-ignore:
+      - 'fix/ci-security-patch'
   workflow_dispatch:
 
 jobs:

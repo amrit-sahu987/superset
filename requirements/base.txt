@@ -183,6 +183,8 @@ idna==3.10
     #   requests
     #   trio
     #   url-normalize
+invoke==3.0.3
+    # via paramiko
 isodate==0.7.2
     # via
     #   apache-superset (pyproject.toml)
